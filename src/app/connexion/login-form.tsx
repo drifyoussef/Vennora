@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,9 @@ export function LoginForm({ suite }: { suite?: string }) {
     loginAction,
     {},
   );
+  // Saisir un mot de passe à l'aveugle sur un téléphone, dehors, est la
+  // première cause d'échec de connexion sur le terrain.
+  const [revealed, setRevealed] = useState(false);
 
   return (
     <form action={formAction} className="space-y-4" noValidate>
@@ -63,18 +66,39 @@ export function LoginForm({ suite }: { suite?: string }) {
 
       <div className="space-y-2">
         <Label htmlFor="password">Mot de passe</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className="h-11"
-          aria-invalid={Boolean(state.fieldErrors?.password)}
-          aria-describedby={
-            state.fieldErrors?.password ? "password-error" : undefined
-          }
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={revealed ? "text" : "password"}
+            autoComplete="current-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            required
+            className="h-11 pr-12"
+            aria-invalid={Boolean(state.fieldErrors?.password)}
+            aria-describedby={
+              state.fieldErrors?.password ? "password-error" : undefined
+            }
+          />
+          <button
+            type="button"
+            onClick={() => setRevealed((shown) => !shown)}
+            aria-pressed={revealed}
+            aria-controls="password"
+            aria-label={
+              revealed ? "Masquer le mot de passe" : "Afficher le mot de passe"
+            }
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-md focus-visible:ring-2 focus-visible:outline-none"
+          >
+            {revealed ? (
+              <EyeOff className="size-4" aria-hidden="true" />
+            ) : (
+              <Eye className="size-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
         {state.fieldErrors?.password && (
           <p id="password-error" className="text-sm text-destructive">
             {state.fieldErrors.password}
