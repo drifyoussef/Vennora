@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Vennora">
+  <rect width="512" height="512" rx="112" fill="#0F3D4C"/>
+  <path d="M136 128 L256 400 L376 128" fill="none" stroke="#F2EDE3" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 400 L318 274" fill="none" stroke="#D97A28" stroke-width="46" stroke-linecap="round"/>
+</svg>

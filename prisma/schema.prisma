@@ -1,0 +1,671 @@
+// Vennora — schéma de données
+//
+// Base : MongoDB Atlas (replica set → transactions interactives disponibles).
+// Conséquence assumée : aucune contrainte d'intégrité au niveau base. Les
+// relations et les suppressions en cascade sont portées par Prisma et par la
+// couche `src/core`. Toute lecture/écriture DOIT passer par un contexte
+// tenant (voir src/core/tenant.ts) : `orgId` est présent sur chaque modèle
+// métier et indexé en tête de chaque index composé.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Énumérations
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+}
+
+enum CustomerKind {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum InterventionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AnomalySeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AnomalyStatus {
+  OPEN
+  RESOLVED
+  IGNORED
+}
+
+enum TranscriptStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum ReportOrigin {
+  MANUAL
+  AI
+}
+
+enum DocumentCategory {
+  REPORT
+  INVOICE
+  QUOTE
+  CERTIFICATE
+  PHOTO
+  OTHER
+}
+
+enum ReminderStatus {
+  PENDING
+  SCHEDULED
+  DONE
+  DISMISSED
+}
+
+// ---------------------------------------------------------------------------
+// Socle multi-métiers
+// ---------------------------------------------------------------------------
+
+/// Un métier (vertical). Le MVP n'active que « ramonage », mais toute la
+/// configuration métier (types d'équipement, types d'intervention) est
+/// rattachée ici pour permettre l'ajout d'un vertical sans migration.
+model Trade {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  slug     String  @unique
+  colorHex String  @default("#0F3D4C")
+  active   Boolean @default(true)
+
+  organizations     Organization[]
+  equipmentTypes    EquipmentType[]
+  interventionTypes InterventionType[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Catalogue des types d'équipement, propre à un métier.
+/// Ramonage : CHEMINEE, POELE_BOIS, POELE_GRANULES, INSERT, CHAUDIERE_BOIS…
+model EquipmentType {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  tradeId String @db.ObjectId
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  code      String // ex. « POELE_GRANULES »
+  label     String // ex. « Poêle à granulés »
+  icon      String? // nom d'icône lucide
+  /// Périodicité réglementaire/conseillée par défaut, en mois.
+  defaultIntervalMonths Int?    @default(12)
+  sortOrder             Int     @default(0)
+  active                Boolean @default(true)
+
+  equipments Equipment[]
+
+  @@unique([tradeId, code])
+  @@index([tradeId, active, sortOrder])
+}
+
+/// Catalogue des types d'intervention, propre à un métier.
+/// Ramonage : RAMONAGE, ENTRETIEN, CONTROLE, DEPANNAGE, AUTRE
+model InterventionType {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  tradeId String @db.ObjectId
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  code               String
+  label              String
+  colorHex           String  @default("#0F3D4C")
+  defaultDurationMin Int     @default(60)
+  /// Délai conseillé avant la prochaine intervention du même type.
+  recurrenceMonths   Int?
+  sortOrder          Int     @default(0)
+  active             Boolean @default(true)
+
+  interventions Intervention[]
+
+  @@unique([tradeId, code])
+  @@index([tradeId, active, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Tenant
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String
+  slug String @unique
+
+  address    String?
+  postalCode String?
+  city       String?
+  country    String  @default("FR")
+  phone      String?
+  email      String?
+  siret      String?
+  logoKey    String?
+
+  tradeId String @db.ObjectId
+  trade   Trade  @relation(fields: [tradeId], references: [id])
+
+  /// Réglages libres (mentions légales du rapport, expéditeur e-mail, etc.).
+  settings Json?
+
+  users         User[]
+  customers     Customer[]
+  sites         Site[]
+  equipments    Equipment[]
+  interventions Intervention[]
+  photos        InterventionPhoto[]
+  voiceNotes    VoiceNote[]
+  anomalies     Anomaly[]
+  reports       Report[]
+  signatures    Signature[]
+  documents     Document[]
+  reminders     Reminder[]
+  auditLogs     AuditLog[]
+  counters      Counter[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  firstName    String
+  lastName     String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         UserRole @default(TECHNICIAN)
+  active       Boolean  @default(true)
+  avatarKey    String?
+  /// Couleur d'affichage du technicien dans le planning.
+  colorHex     String?
+
+  lastLoginAt DateTime?
+  /// Date du dernier changement de mot de passe. Tout jeton émis avant cette
+  /// date est refusé : changer son mot de passe déconnecte donc réellement
+  /// les autres appareils, au lieu de les laisser valides sept jours.
+  passwordChangedAt DateTime?
+
+  interventions     Intervention[] @relation("InterventionTechnician")
+  uploadedPhotos    InterventionPhoto[]
+  voiceNotes        VoiceNote[]
+  resolvedAnomalies Anomaly[]      @relation("AnomalyResolver")
+  validatedReports  Report[]       @relation("ReportValidator")
+  uploadedDocuments Document[]
+  auditLogs         AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, active])
+  @@index([orgId, role])
+}
+
+// ---------------------------------------------------------------------------
+// Cœur métier : Client → Site → Équipement → Intervention
+// ---------------------------------------------------------------------------
+
+model Customer {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  kind        CustomerKind @default(INDIVIDUAL)
+  /// Nom d'affichage : « Dupont Jean » ou « Martin SARL ». Toujours renseigné,
+  /// c'est ce qui sert à la recherche et au tri.
+  name        String
+  firstName   String?
+  lastName    String?
+  companyName String?
+
+  email          String?
+  phone          String?
+  phoneSecondary String?
+
+  address    String?
+  postalCode String?
+  city       String?
+
+  notes String?
+
+  /// Miroir dénormalisé pour la liste clients (évite un aggregate par ligne).
+  lastInterventionAt DateTime?
+  nextInterventionAt DateTime?
+
+  sites         Site[]
+  interventions Intervention[]
+  documents     Document[]
+  reminders     Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, name])
+  @@index([orgId, city])
+  @@index([orgId, phone])
+  @@index([orgId, email])
+}
+
+model Site {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  customerId String   @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  name              String // « Maison principale », « Résidence secondaire »
+  address           String
+  addressComplement String?
+  postalCode        String
+  city              String
+  latitude          Float?
+  longitude         Float?
+
+  notes       String?
+  accessNotes String? // digicode, chien, emplacement des clés…
+
+  equipments    Equipment[]
+  interventions Intervention[]
+  documents     Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, customerId])
+  @@index([orgId, city])
+  @@index([orgId, name])
+}
+
+model Equipment {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  siteId String @db.ObjectId
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  typeId String        @db.ObjectId
+  type   EquipmentType @relation(fields: [typeId], references: [id])
+
+  /// Libellé court affiché partout : « Poêle à granulés — Séjour ».
+  label        String?
+  brand        String?
+  model        String?
+  serialNumber String?
+  location     String? // « Séjour », « Chaufferie »
+  installedAt  DateTime?
+
+  description String?
+  notes       String?
+
+  /// Jeton opaque du QR code. Jamais l'id brut : le QR est physiquement
+  /// collé sur l'équipement et peut être photographié par n'importe qui.
+  qrToken String @unique @default(cuid())
+
+  active Boolean @default(true)
+
+  lastInterventionAt DateTime?
+  nextDueAt          DateTime?
+
+  interventions Intervention[]
+  anomalies     Anomaly[]
+  photos        InterventionPhoto[]
+  documents     Document[]
+  reminders     Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, siteId])
+  @@index([orgId, typeId])
+  @@index([orgId, nextDueAt])
+  @@index([orgId, serialNumber])
+}
+
+model Intervention {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  /// Numéro lisible « INT-2026-0042 », unique dans l'organisation.
+  reference String
+
+  customerId String   @db.ObjectId
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  siteId String @db.ObjectId
+  site   Site   @relation(fields: [siteId], references: [id])
+
+  equipmentId String?    @db.ObjectId
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
+
+  technicianId String @db.ObjectId
+  technician   User   @relation("InterventionTechnician", fields: [technicianId], references: [id])
+
+  typeId String           @db.ObjectId
+  type   InterventionType @relation(fields: [typeId], references: [id])
+
+  /// Créneau planifié. `scheduledStart` porte la date ET l'heure de début :
+  /// une seule colonne à indexer pour les vues jour/semaine.
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  status InterventionStatus @default(PLANNED)
+
+  /// Notes saisies au clavier par le technicien sur le terrain.
+  notes String?
+  /// Notes internes, jamais reprises dans le rapport client.
+  internalNotes String?
+
+  /// Prochaine intervention conseillée, fixée à la clôture.
+  nextInterventionAt DateTime?
+
+  photos     InterventionPhoto[]
+  voiceNotes VoiceNote[]
+  anomalies  Anomaly[]
+  report     Report?
+  signature  Signature?
+  documents  Document[]
+  reminders  Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, reference])
+  @@index([orgId, scheduledStart])
+  @@index([orgId, technicianId, scheduledStart])
+  @@index([orgId, status, scheduledStart])
+  @@index([orgId, customerId, scheduledStart])
+  @@index([orgId, equipmentId, scheduledStart])
+  @@index([orgId, siteId])
+}
+
+// ---------------------------------------------------------------------------
+// Terrain : photos, notes vocales, anomalies
+// ---------------------------------------------------------------------------
+
+model InterventionPhoto {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  interventionId String?       @db.ObjectId
+  intervention   Intervention? @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+
+  /// Dupliqué depuis l'intervention pour afficher la galerie d'un équipement
+  /// sans traverser toutes ses interventions.
+  equipmentId String?    @db.ObjectId
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
+
+  anomalyId String?  @db.ObjectId
+  anomaly   Anomaly? @relation(fields: [anomalyId], references: [id])
+
+  /// Clé de stockage S3. Jamais d'URL publique en base : les URLs sont
+  /// signées à la demande et expirent.
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+  width      Int?
+  height     Int?
+
+  caption String?
+  takenAt DateTime?
+
+  uploadedById String? @db.ObjectId
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id])
+
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([orgId, interventionId, sortOrder])
+  @@index([orgId, equipmentId, createdAt])
+  @@index([orgId, anomalyId])
+}
+
+model VoiceNote {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  interventionId String       @db.ObjectId
+  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+
+  storageKey  String
+  mimeType    String
+  durationSec Int?
+  sizeBytes   Int?
+
+  /// Texte issu de la transcription, puis corrigé par le technicien.
+  transcript       String?
+  transcriptStatus TranscriptStatus @default(PENDING)
+  transcriptError  String?
+  /// Vrai dès que le technicien a modifié le texte à la main.
+  transcriptEdited Boolean          @default(false)
+
+  createdById String? @db.ObjectId
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, interventionId, createdAt])
+}
+
+model Anomaly {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  interventionId String       @db.ObjectId
+  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+
+  equipmentId String?    @db.ObjectId
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
+
+  title          String
+  description    String?
+  severity       AnomalySeverity @default(MEDIUM)
+  recommendation String?
+  status         AnomalyStatus   @default(OPEN)
+
+  resolvedAt   DateTime?
+  resolvedById String?   @db.ObjectId
+  resolvedBy   User?     @relation("AnomalyResolver", fields: [resolvedById], references: [id])
+  resolutionNote String?
+
+  photos InterventionPhoto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, status, severity])
+  @@index([orgId, interventionId])
+  @@index([orgId, equipmentId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Restitution : rapport, signature, documents
+// ---------------------------------------------------------------------------
+
+model Report {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  interventionId String       @unique @db.ObjectId
+  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+
+  // Les six sections du compte-rendu, éditables une par une.
+  summary         String?
+  workDone        String?
+  equipmentState  String?
+  anomaliesSummary String?
+  recommendations String?
+  futureWork      String?
+
+  origin       ReportOrigin @default(MANUAL)
+  aiModel      String?
+  /// Texte brut soumis au modèle, conservé pour audit/regénération.
+  aiSourceText String?
+  aiGeneratedAt DateTime?
+  /// Nombre de régénérations demandées par le technicien.
+  regenerations Int @default(0)
+
+  /// Un rapport n'est jamais envoyé sans validation humaine explicite.
+  validatedAt   DateTime?
+  validatedById String?   @db.ObjectId
+  validatedBy   User?     @relation("ReportValidator", fields: [validatedById], references: [id])
+
+  pdfKey         String?
+  pdfGeneratedAt DateTime?
+
+  sentAt DateTime?
+  sentTo String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, createdAt])
+}
+
+model Signature {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  interventionId String       @unique @db.ObjectId
+  intervention   Intervention @relation(fields: [interventionId], references: [id], onDelete: Cascade)
+
+  signerName String
+  /// PNG de la signature manuscrite, stocké comme les autres fichiers.
+  storageKey String
+  signedAt   DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, signedAt])
+}
+
+model Document {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId String       @db.ObjectId
+
+  customerId     String?       @db.ObjectId
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  siteId         String?       @db.ObjectId
+  site           Site?         @relation(fields: [siteId], references: [id])
+  equipmentId    String?       @db.ObjectId
+  equipment      Equipment?    @relation(fields: [equipmentId], references: [id])
+  interventionId String?       @db.ObjectId
+  intervention   Intervention? @relation(fields: [interventionId], references: [id])
+
+  name       String
+  category   DocumentCategory @default(OTHER)
+  storageKey String
+  mimeType   String
+  sizeBytes  Int
+
+  uploadedById String? @db.ObjectId
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([orgId, customerId, createdAt])
+  @@index([orgId, interventionId])
+  @@index([orgId, category, createdAt])
+}
+
+/// Rappel de prochaine intervention. Volontairement passif dans le MVP :
+/// il alimente une liste « à replanifier », pas un moteur de relances.
+model Reminder {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  customerId  String?    @db.ObjectId
+  customer    Customer?  @relation(fields: [customerId], references: [id])
+  equipmentId String?    @db.ObjectId
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id])
+
+  /// Intervention à l'origine du rappel.
+  sourceInterventionId String?       @db.ObjectId
+  sourceIntervention   Intervention? @relation(fields: [sourceInterventionId], references: [id])
+
+  dueDate DateTime
+  note    String?
+  status  ReminderStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, status, dueDate])
+}
+
+// ---------------------------------------------------------------------------
+// Technique
+// ---------------------------------------------------------------------------
+
+/// Journal des actions sensibles (création/suppression, envoi de rapport,
+/// signature, changement de rôle).
+model AuditLog {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  userId String? @db.ObjectId
+  user   User?   @relation(fields: [userId], references: [id])
+
+  action   String // « intervention.completed », « report.sent »…
+  entity   String
+  entityId String?
+  metadata Json?
+
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([orgId, entity, entityId])
+}
+
+/// Séquences par organisation (numérotation des interventions).
+model Counter {
+  id    String       @id @default(auto()) @map("_id") @db.ObjectId
+  orgId String       @db.ObjectId
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  key   String // « intervention:2026 »
+  value Int    @default(0)
+
+  @@unique([orgId, key])
+}

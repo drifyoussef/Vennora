@@ -1,0 +1,45 @@
+{
+  "name": "Vennora",
+  "short_name": "Vennora",
+  "description": "Gérez vos interventions. Maîtrisez vos équipements.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F3D4C",
+  "theme_color": "#0F3D4C",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/vennora.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/vennora.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ma journée",
+      "short_name": "Journée",
+      "url": "/"
+    },
+    {
+      "name": "Scanner un équipement",
+      "short_name": "Scanner",
+      "url": "/scanner"
+    },
+    {
+      "name": "Nouvelle intervention",
+      "short_name": "Intervention",
+      "url": "/interventions/nouvelle"
+    }
+  ]
+}

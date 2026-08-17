@@ -1,26 +1,232 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Vennora — design tokens
+   Couleur mère  : bleu pétrole  #0F3D4C
+   Accent        : ambre cuivré  #D97A28
+   Papeterie     : sable clair   #F2EDE3
+   Neutre texte  : ardoise       #6B7780
+--------------------------------------------------------------------------- */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Marque */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-subtle: var(--brand-subtle);
+
+  /* Sémantique métier */
+  --color-severity-info: var(--severity-info);
+  --color-severity-low: var(--severity-low);
+  --color-severity-medium: var(--severity-medium);
+  --color-severity-high: var(--severity-high);
+  --color-severity-critical: var(--severity-critical);
+
+  --color-status-planned: var(--status-planned);
+  --color-status-progress: var(--status-progress);
+  --color-status-done: var(--status-done);
+  --color-status-cancelled: var(--status-cancelled);
+
+  /* Métiers (verticaux) */
+  --color-trade-ramonage: #2e2a28;
+  --color-trade-chauffage: #e2610f;
+  --color-trade-climatisation: #4fa8c7;
+  --color-trade-incendie: #c8102e;
+  --color-trade-portes: #7d8a93;
+  --color-trade-cuisine: #c9a227;
+  --color-trade-piscine: #00a0a8;
+  --color-trade-nuisibles: #4f7b45;
+  --color-trade-eau: #1e7fb8;
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --radius: 0.5rem;
+
+  --background: #faf8f3;
+  --foreground: #17282e;
+
+  --card: #ffffff;
+  --card-foreground: #17282e;
+  --popover: #ffffff;
+  --popover-foreground: #17282e;
+
+  --primary: #0f3d4c;
+  --primary-foreground: #f6faf9;
+
+  --secondary: #f2ede3;
+  --secondary-foreground: #0f3d4c;
+
+  --muted: #f2ede3;
+  --muted-foreground: #6b7780;
+
+  --accent: #e8e0d1;
+  --accent-foreground: #0f3d4c;
+
+  --destructive: #c8102e;
+  --destructive-foreground: #fff5f6;
+
+  --border: #e3dbcd;
+  --input: #d8cebd;
+  --ring: #0f3d4c;
+
+  --brand: #d97a28;
+  --brand-foreground: #ffffff;
+  --brand-subtle: #fbf0e4;
+
+  --severity-info: #6b7780;
+  --severity-low: #4f7b45;
+  --severity-medium: #c9a227;
+  --severity-high: #e2610f;
+  --severity-critical: #c8102e;
+
+  --status-planned: #6b7780;
+  --status-progress: #d97a28;
+  --status-done: #4f7b45;
+  --status-cancelled: #a8a29a;
+
+  --sidebar: #0f3d4c;
+  --sidebar-foreground: #cfe0e5;
+  --sidebar-primary: #d97a28;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #16505f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1d5768;
+  --sidebar-ring: #d97a28;
+}
+
+.dark {
+  --background: #0b1c22;
+  --foreground: #e6ecec;
+
+  --card: #10262e;
+  --card-foreground: #e6ecec;
+  --popover: #10262e;
+  --popover-foreground: #e6ecec;
+
+  --primary: #58a9bf;
+  --primary-foreground: #06171d;
+
+  --secondary: #17323b;
+  --secondary-foreground: #e6ecec;
+
+  --muted: #17323b;
+  --muted-foreground: #93a2a8;
+
+  --accent: #1c3d47;
+  --accent-foreground: #e6ecec;
+
+  --destructive: #e2495f;
+  --destructive-foreground: #1a0508;
+
+  --border: #ffffff1a;
+  --input: #ffffff26;
+  --ring: #58a9bf;
+
+  --brand: #e08a3e;
+  --brand-foreground: #1c0d02;
+  --brand-subtle: #2b1a0c;
+
+  --severity-info: #93a2a8;
+  --severity-low: #6fa163;
+  --severity-medium: #d9b73f;
+  --severity-high: #ef7a30;
+  --severity-critical: #e2495f;
+
+  --status-planned: #93a2a8;
+  --status-progress: #e08a3e;
+  --status-done: #6fa163;
+  --status-cancelled: #5c6a70;
+
+  --sidebar: #08161b;
+  --sidebar-foreground: #b9cbd1;
+  --sidebar-primary: #e08a3e;
+  --sidebar-primary-foreground: #1c0d02;
+  --sidebar-accent: #12303a;
+  --sidebar-accent-foreground: #e6ecec;
+  --sidebar-border: #ffffff14;
+  --sidebar-ring: #e08a3e;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+  }
+  /* Titres : un peu plus resserrés que le défaut, ton « outil de travail ». */
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-tight;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Zone tactile confortable pour l'app technicien (gants, extérieur). */
+  .touch-target {
+    @apply min-h-12 min-w-12;
+  }
+  /* Respecte l'encoche / la barre gestuelle iOS en PWA plein écran. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Le planning et les tableaux larges défilent dans leur conteneur,
+   jamais la page entière. */
+@media (max-width: 768px) {
+  body {
+    overscroll-behavior-y: contain;
+  }
 }
