@@ -17,12 +17,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Vennora",
-    template: "%s · Vennora",
+    default: "Vennora Ramonage",
+    template: "%s · Vennora Ramonage",
   },
   description:
     "Gérez vos interventions. Maîtrisez vos équipements.",
-  applicationName: "Vennora",
+  applicationName: "Vennora Ramonage",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [{ url: "/icons/vennora.svg", type: "image/svg+xml" }],
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Vennora",
+    title: "Vennora Ramonage",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },

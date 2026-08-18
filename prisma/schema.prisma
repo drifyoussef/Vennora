@@ -1,4 +1,4 @@
-// Vennora — schéma de données
+// Vennora Ramonage — schéma de données
 //
 // Base : MongoDB Atlas (replica set → transactions interactives disponibles).
 // Conséquence assumée : aucune contrainte d'intégrité au niveau base. Les

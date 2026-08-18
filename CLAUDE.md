@@ -1,4 +1,4 @@
-# Vennora — notes pour les agents
+# Vennora Ramonage — notes pour les agents
 
 SaaS B2B de gestion des interventions techniques. Vertical actif : ramonage.
 Interface entièrement en français, y compris les identifiants de routes
