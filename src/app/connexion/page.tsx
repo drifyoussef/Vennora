@@ -58,7 +58,10 @@ export default async function LoginPage({
     <main className="min-h-dvh bg-background lg:grid lg:grid-cols-[1.05fr_1fr]">
       {/* Panneau de marque. Sur mobile il se réduit à une bande : l'écran
           appartient au clavier et aux deux champs, pas au discours. */}
-      <aside className="bg-sidebar text-sidebar-foreground relative isolate flex flex-col overflow-hidden px-6 pt-12 pb-10 lg:px-12 lg:py-14">
+      {/* Le filet de droite est invisible en clair (fort contraste sable /
+          pétrole) mais sépare les deux panneaux en sombre, où ils sont
+          presque de la même valeur. */}
+      <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border relative isolate flex flex-col overflow-hidden px-6 pt-12 pb-10 lg:border-r lg:px-12 lg:py-14">
         {/* Filigrane : la marque agrandie et recadrée, assez faible pour ne
             jamais concurrencer le texte. */}
         <div

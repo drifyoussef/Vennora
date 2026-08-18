@@ -55,7 +55,7 @@ export function VennoraLogo({
       {showWordmark && (
         <div className="min-w-0 leading-none">
           <div className="font-heading text-[17px] font-semibold tracking-tight">
-            Vennora
+            Vennora Ramonage
           </div>
           {subtitle && (
             <div className="mt-1 truncate text-[11px] font-medium opacity-60">
