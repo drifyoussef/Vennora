@@ -33,10 +33,24 @@ const serverSchema = z.object({
     .optional()
     .transform((v) => v === "true"),
 
-  AI_PROVIDER: z.enum(["mock", "anthropic"]).default("mock"),
+  AI_PROVIDER: z.enum(["mock", "anthropic", "groq"]).default("mock"),
+  /** Modèle de rédaction servi par Groq, quand `AI_PROVIDER=groq`. */
+  GROQ_MODEL: z.string().default("qwen/qwen3.6-27b"),
   ANTHROPIC_API_KEY: z.string().optional(),
-  TRANSCRIPTION_PROVIDER: z.enum(["mock", "openai"]).default("mock"),
+  TRANSCRIPTION_PROVIDER: z.enum(["mock", "openai", "groq"]).default("mock"),
   OPENAI_API_KEY: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
+  /**
+   * Modèle Whisper servi par Groq.
+   *
+   * `whisper-large-v3` et non la variante « turbo » : mesuré sur une note de
+   * quinze secondes en français, turbo ne rend aucun texte exploitable là où
+   * la version complète transcrit correctement — pour un écart de latence de
+   * trente millisecondes, invisible à l'usage. Le gain de vitesse annoncé de
+   * la variante distillée ne se voit pas sur des notes de cette durée, sa
+   * perte de qualité hors anglais, si.
+   */
+  GROQ_TRANSCRIPTION_MODEL: z.string().default("whisper-large-v3"),
 
   MAIL_DRIVER: z.enum(["console", "resend"]).default("console"),
   MAIL_FROM: z.string().default("Vennora <ne-pas-repondre@vennora.app>"),
@@ -72,8 +86,14 @@ function load() {
   if (env.AI_PROVIDER === "anthropic" && !env.ANTHROPIC_API_KEY) {
     throw new Error("AI_PROVIDER=anthropic mais ANTHROPIC_API_KEY manquant.");
   }
+  if (env.AI_PROVIDER === "groq" && !env.GROQ_API_KEY) {
+    throw new Error("AI_PROVIDER=groq mais GROQ_API_KEY manquant.");
+  }
   if (env.TRANSCRIPTION_PROVIDER === "openai" && !env.OPENAI_API_KEY) {
     throw new Error("TRANSCRIPTION_PROVIDER=openai mais OPENAI_API_KEY manquant.");
+  }
+  if (env.TRANSCRIPTION_PROVIDER === "groq" && !env.GROQ_API_KEY) {
+    throw new Error("TRANSCRIPTION_PROVIDER=groq mais GROQ_API_KEY manquant.");
   }
   if (env.MAIL_DRIVER === "resend" && !env.RESEND_API_KEY) {
     throw new Error("MAIL_DRIVER=resend mais RESEND_API_KEY manquant.");

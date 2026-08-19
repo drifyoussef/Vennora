@@ -170,7 +170,37 @@ Le parcours du §29 est bouclé : client → site → équipement → interventi
 photos → dictée → compte-rendu → validation → signature → PDF → envoi →
 historique.
 
-Trois briques tournent en implémentation simulée, faute de clés : la
-transcription vocale, la rédaction assistée et l'envoi d'e-mails. Chacune est
-derrière une interface — voir `AI_PROVIDER`, `TRANSCRIPTION_PROVIDER` et
-`MAIL_DRIVER` dans `.env.example`.
+Trois briques tournent en implémentation simulée tant qu'aucune clé n'est
+fournie : la transcription vocale, la rédaction assistée et l'envoi
+d'e-mails. Chacune est derrière une interface — voir `AI_PROVIDER`,
+`TRANSCRIPTION_PROVIDER` et `MAIL_DRIVER` dans `.env.example`.
+
+**Rédaction assistée.** `AI_PROVIDER=groq` branche un modèle ouvert servi par
+Groq — `qwen/qwen3.6-27b` par défaut — avec le même contrat que l'adaptateur
+Anthropic : les six sections sont imposées par un schéma JSON strict, pas
+demandées dans le prompt.
+
+Deux contraintes valent d'être connues avant de brancher ce modèle, l'une
+comme l'autre mesurées :
+
+- **le raisonnement du modèle est conservé, et il coûte onze secondes** par
+  compte-rendu contre une seule sans lui. Il les vaut pour la fidélité aux
+  notes : privé de réflexion, le modèle comble les trous — « tirage conforme
+  aux normes » là où la note dit « tirage conforme », conseils d'entretien
+  que personne n'a donnés. Avec, il écrit « l'étanchéité n'a pas été
+  contrôlée lors de cette intervention ». Sur une pièce remise au client,
+  dire ce qu'on n'a pas fait vaut mieux que meubler ;
+- **le palier gratuit plafonne à 8 000 jetons par minute** pour ce modèle,
+  budget de sortie demandé compris. Une génération en consomme environ 5 500 :
+  au-delà d'une par minute, l'API répond 429 et l'interface propose de rédiger
+  à la main.
+
+**Dictée.** `TRANSCRIPTION_PROVIDER=groq` branche Whisper large v3 servi par
+Groq, dont le palier gratuit suffit largement à une entreprise de terrain. La
+route est compatible avec celle d'OpenAI : les deux fournisseurs partagent le
+même adaptateur, changer revient à changer une ligne de configuration. Le
+modèle par défaut est `whisper-large-v3` : mesurée sur une note française de
+quinze secondes, la variante « turbo » ne rend rien d'exploitable pour trente
+millisecondes gagnées. La langue est envoyée d'office (`fr`), et le vocabulaire
+du métier est passé en amorce — « débistrage » ou « boisseau » ne sont pas
+dans le vocabulaire courant d'un modèle généraliste.

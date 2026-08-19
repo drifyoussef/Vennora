@@ -16,7 +16,10 @@ let transcriber: TranscriptionProvider | null = null;
 export async function getReportGenerator(): Promise<ReportGenerator> {
   if (generator) return generator;
 
-  if (env.AI_PROVIDER === "anthropic") {
+  if (env.AI_PROVIDER === "groq") {
+    const { groqGenerator } = await import("./groq-generator");
+    generator = groqGenerator;
+  } else if (env.AI_PROVIDER === "anthropic") {
     const { anthropicGenerator } = await import("./anthropic");
     generator = anthropicGenerator;
   } else {
@@ -28,7 +31,10 @@ export async function getReportGenerator(): Promise<ReportGenerator> {
 export async function getTranscriptionProvider(): Promise<TranscriptionProvider> {
   if (transcriber) return transcriber;
 
-  if (env.TRANSCRIPTION_PROVIDER === "openai") {
+  if (env.TRANSCRIPTION_PROVIDER === "groq") {
+    const { groqTranscription } = await import("./groq-transcription");
+    transcriber = groqTranscription;
+  } else if (env.TRANSCRIPTION_PROVIDER === "openai") {
     const { openaiTranscription } = await import("./openai-transcription");
     transcriber = openaiTranscription;
   } else {
