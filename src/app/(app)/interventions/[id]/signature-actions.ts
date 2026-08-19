@@ -9,6 +9,7 @@ import { requireEditableIntervention } from "@/core/data/field";
 import { toActionError, type ActionResult } from "@/core/errors";
 import { objectId } from "@/core/schemas";
 import { audit } from "@/core/tenant";
+import { publishReportPdf, withdrawReportPdf } from "@/core/data/report-pdf";
 import { deleteFile, storeFile } from "@/services/storage";
 
 const schema = z.object({
@@ -119,18 +120,22 @@ export async function saveSignatureAction(
       });
     }
 
-    // Le PDF existant montre l'état d'avant : on le retire pour qu'aucun
-    // envoi ne parte avec une signature qui n'est plus celle enregistrée.
+    // Le PDF imprimé avant la signature ne la montre pas : il est caduc.
+    // Plutôt que de le détruire — ce qui, l'intervention une fois close,
+    // laissait un dossier sans rapport et sans moyen d'en refaire un —, on le
+    // reconstruit immédiatement à partir du compte-rendu déjà validé. La
+    // validation reste acquise : le texte n'a pas changé, seule la signature
+    // s'y ajoute.
     const report = await db.report.findFirst({
       where: { interventionId: id },
-      select: { pdfKey: true },
+      select: { pdfKey: true, validatedAt: true },
     });
-    if (report?.pdfKey) {
-      await db.report.updateMany({
-        where: { interventionId: id },
-        data: { pdfKey: null, pdfGeneratedAt: null, validatedAt: null, validatedById: null },
-      });
-      await deleteFile(report.pdfKey);
+    if (report?.validatedAt) {
+      await publishReportPdf(context, id);
+    } else if (report?.pdfKey) {
+      // Compte-rendu retombé en brouillon : rien à publier, on retire le
+      // fichier et la ligne de document qui l'annonçait.
+      await withdrawReportPdf(context, id, report.pdfKey);
     }
 
     await audit(ctx, {
@@ -142,6 +147,7 @@ export async function saveSignatureAction(
     });
 
     revalidatePath(`/interventions/${id}`);
+    revalidatePath("/documents");
     return {
       ok: true,
       data: { signedAt: signedAt.toISOString(), signerName: parsed.data.signerName },

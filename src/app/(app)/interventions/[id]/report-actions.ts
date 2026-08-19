@@ -5,7 +5,8 @@ import { z } from "zod";
 
 import { getActionContext } from "@/core/context";
 import { requireEditableIntervention, requireVisibleIntervention } from "@/core/data/field";
-import { buildPdfData, buildReportContext, loadReportData } from "@/core/data/report";
+import { buildReportContext, loadReportData } from "@/core/data/report";
+import { publishReportPdf } from "@/core/data/report-pdf";
 import { refreshEquipmentDates } from "@/core/data/equipment";
 import { refreshCustomerDates } from "@/core/data/customers";
 import { ReportOrigin } from "@/core/enums";
@@ -14,8 +15,7 @@ import { objectId } from "@/core/schemas";
 import { audit } from "@/core/tenant";
 import { getReportGenerator } from "@/services/ai";
 import { sendMail } from "@/services/mail";
-import { renderReportPdf } from "@/services/pdf";
-import { deleteFile, fileUrl, storeFile } from "@/services/storage";
+import { fileUrl } from "@/services/storage";
 import { formatDate } from "@/lib/format";
 
 const SECTION_KEYS = [
@@ -177,49 +177,62 @@ export async function validateReportAction(
     });
 
     const data = await loadReportData(context, id);
-    const pdf = await renderReportPdf(await buildPdfData(data));
-
-    // Un PDF précédent devient caduc dès qu'on en régénère un.
-    if (data.report?.pdfKey) await deleteFile(data.report.pdfKey);
-
-    const stored = await storeFile(
-      {
-        orgId: ctx.orgId,
-        scope: "rapports",
-        ownerId: id,
-        body: pdf,
-        contentType: "application/pdf",
-      },
-      ["document"],
-    );
-
-    await db.report.updateMany({
-      where: { interventionId: id },
-      data: { pdfKey: stored.key, pdfGeneratedAt: new Date() },
-    });
-
-    await db.document.deleteMany({
-      where: { interventionId: id, category: "REPORT" },
-    });
-    await db.document.create({
-      data: {
-        orgId: ctx.orgId,
-        interventionId: id,
-        customerId: data.customer.id,
-        name: `Rapport ${data.reference}.pdf`,
-        category: "REPORT",
-        storageKey: stored.key,
-        mimeType: "application/pdf",
-        sizeBytes: stored.sizeBytes,
-        uploadedById: user.id,
-      },
-    });
+    const stored = await publishReportPdf(context, id);
 
     await audit(ctx, {
       action: "report.validated",
       entity: "Report",
       entityId: id,
       metadata: { reference: data.reference },
+    });
+
+    revalidatePath(`/interventions/${id}`);
+    revalidatePath("/documents");
+
+    return { ok: true, data: { pdfUrl: await fileUrl(stored.key) } };
+  } catch (e) {
+    return toActionError(e);
+  }
+}
+
+/**
+ * Régénère le PDF d'un compte-rendu déjà validé.
+ *
+ * Volontairement gardée par `requireVisibleIntervention` et non par
+ * `requireEditableIntervention` : régénérer ne touche pas au contenu du
+ * compte-rendu, seulement au fichier qui l'imprime. Sans cette action, une
+ * intervention close dont le PDF a disparu était une impasse — la validation,
+ * seul endroit qui générait le fichier, refuse toute intervention terminée.
+ */
+export async function regenerateReportPdfAction(
+  interventionId: string,
+): Promise<ActionResult<{ pdfUrl: string }>> {
+  try {
+    const context = await getActionContext("report.edit");
+    const { db, ctx } = context;
+    const id = objectId.parse(interventionId);
+
+    await requireVisibleIntervention(context, id);
+
+    const report = await db.report.findFirst({
+      where: { interventionId: id },
+      select: { validatedAt: true },
+    });
+    if (!report?.validatedAt) {
+      return {
+        ok: false,
+        code: "CONFLICT",
+        error:
+          "Le compte-rendu doit avoir été validé pour qu'un PDF puisse être régénéré.",
+      };
+    }
+
+    const stored = await publishReportPdf(context, id);
+
+    await audit(ctx, {
+      action: "report.pdf_regenerated",
+      entity: "Report",
+      entityId: id,
     });
 
     revalidatePath(`/interventions/${id}`);

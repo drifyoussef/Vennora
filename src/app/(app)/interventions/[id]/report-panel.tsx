@@ -31,6 +31,7 @@ import {
   generateReportAction,
   saveReportAction,
   sendReportAction,
+  regenerateReportPdfAction,
   validateReportAction,
   type ReportSectionValues,
   type SectionKey,
@@ -84,6 +85,35 @@ export function ReportPanel({
   const [generating, startGenerating] = useTransition();
   const [saving, startSaving] = useTransition();
   const [sendOpen, setSendOpen] = useState(false);
+  const [regenerating, startRegenerating] = useTransition();
+
+  /**
+   * Réaligne sur le serveur ce qui ne s'écrit pas ici.
+   *
+   * Le PDF, la validation et l'envoi peuvent changer sans passer par ce
+   * panneau : signer régénère le rapport et jette le fichier précédent. Sans
+   * cette remise à niveau, le composant continuait d'afficher « Rapport PDF
+   * prêt » avec le lien de l'ancien fichier, effacé entre-temps — d'où un
+   * téléchargement introuvable alors que la liste des documents, elle,
+   * montrait le bon.
+   *
+   * L'ajustement se fait pendant le rendu, et non dans un effet : c'est le
+   * motif recommandé pour recaler un état sur une propriété qui a changé, et
+   * il évite un rendu intermédiaire avec l'ancienne valeur. Les textes en
+   * cours de saisie ne sont pas touchés — seuls les champs que le serveur
+   * possède le sont.
+   */
+  const [serveur, setServeur] = useState(initial);
+  if (serveur !== initial) {
+    setServeur(initial);
+    setState((s) => ({
+      ...s,
+      pdfUrl: initial.pdfUrl,
+      validatedAt: initial.validatedAt,
+      sentAt: initial.sentAt,
+      sentTo: initial.sentTo,
+    }));
+  }
 
   const busy = generating || saving;
   const validated = Boolean(state.validatedAt) && !dirty;
@@ -92,6 +122,26 @@ export function ReportPanel({
   function set(key: SectionKey, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
     setDirty(true);
+  }
+
+  /**
+   * Refabrique le PDF d'un rapport déjà validé.
+   *
+   * Disponible même sur une intervention close : régénérer n'écrit rien dans
+   * le compte-rendu, cela réimprime ce qui a été validé.
+   */
+  function regenerate() {
+    setFormError(null);
+    startRegenerating(async () => {
+      const result = await regenerateReportPdfAction(interventionId);
+      if (!result.ok) {
+        setFormError(result.error);
+        return;
+      }
+      setState((s) => ({ ...s, pdfUrl: result.data.pdfUrl }));
+      toast.success("PDF régénéré.");
+      router.refresh();
+    });
   }
 
   function generate() {
@@ -268,6 +318,30 @@ export function ReportPanel({
               Enregistrer sans valider
             </Button>
           )}
+        </div>
+      )}
+
+      {state.validatedAt && !state.pdfUrl && !dirty && (
+        <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border p-3.5">
+          <TriangleAlert className="size-4 shrink-0 text-severity-medium" />
+          <span className="text-sm">
+            Le PDF de ce rapport n&apos;est plus disponible.
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={regenerate}
+            disabled={regenerating}
+            className="ml-auto gap-1.5"
+          >
+            {regenerating ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            Régénérer le PDF
+          </Button>
         </div>
       )}
 
