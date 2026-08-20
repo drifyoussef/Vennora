@@ -44,6 +44,7 @@ const nextConfig: NextConfig = {
     "prisma",
     "bcryptjs",
     "@react-pdf/renderer",
+    "nodemailer",
   ],
 
   // Les téléversements du terrain (photos, notes vocales) transitent par des

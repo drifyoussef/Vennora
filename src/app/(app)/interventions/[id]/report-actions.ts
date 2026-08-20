@@ -281,6 +281,9 @@ export async function sendReportAction(
 
     const data = await loadReportData(context, id);
     if (!data.report?.validatedAt) {
+      console.warn(
+        `[vennora] envoi refusé pour ${data.reference} : compte-rendu non validé.`,
+      );
       return {
         ok: false,
         code: "CONFLICT",
@@ -289,6 +292,9 @@ export async function sendReportAction(
       };
     }
     if (!data.report.pdfKey) {
+      console.warn(
+        `[vennora] envoi refusé pour ${data.reference} : aucun PDF associé.`,
+      );
       throw new AppError("Le PDF n'a pas été généré.", "NO_PDF", 409);
     }
 

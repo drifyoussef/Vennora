@@ -52,13 +52,32 @@ const serverSchema = z.object({
    */
   GROQ_TRANSCRIPTION_MODEL: z.string().default("whisper-large-v3"),
 
-  MAIL_DRIVER: z.enum(["console", "resend"]).default("console"),
+  MAIL_DRIVER: z.enum(["console", "smtp"]).default("console"),
   MAIL_FROM: z.string().default("Vennora <ne-pas-repondre@vennora.app>"),
-  RESEND_API_KEY: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  /**
+   * TLS implicite. Laissé vide, il est déduit du port : 465 chiffré d'entrée
+   * de jeu, STARTTLS ailleurs. Ne le forcer que face à un serveur exotique.
+   */
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
 });
 
 function load() {
-  const parsed = serverSchema.safeParse(process.env);
+  // Une variable laissée vide dans un `.env` vaut « non renseignée ».
+  // Sans ça, `SMTP_SECURE=""` — ce que produit naturellement un fichier
+  // d'exemple recopié — n'est ni « true » ni « false » et fait échouer le
+  // démarrage sur une valeur que personne n'a voulu donner.
+  const brut = Object.fromEntries(
+    Object.entries(process.env).filter(([, v]) => v !== ""),
+  );
+
+  const parsed = serverSchema.safeParse(brut);
 
   if (!parsed.success) {
     const details = parsed.error.issues
@@ -95,8 +114,25 @@ function load() {
   if (env.TRANSCRIPTION_PROVIDER === "groq" && !env.GROQ_API_KEY) {
     throw new Error("TRANSCRIPTION_PROVIDER=groq mais GROQ_API_KEY manquant.");
   }
-  if (env.MAIL_DRIVER === "resend" && !env.RESEND_API_KEY) {
-    throw new Error("MAIL_DRIVER=resend mais RESEND_API_KEY manquant.");
+  if (env.MAIL_DRIVER === "smtp" && !env.SMTP_HOST) {
+    throw new Error("MAIL_DRIVER=smtp mais SMTP_HOST manquant.");
+  }
+  if (env.MAIL_DRIVER === "smtp" && env.SMTP_USER && !env.SMTP_PASSWORD) {
+    throw new Error("SMTP_USER est renseigné mais SMTP_PASSWORD manque.");
+  }
+  // Gmail réécrit silencieusement l'expéditeur quand il ne correspond pas au
+  // compte authentifié : le client reçoit alors un rapport signé d'une
+  // adresse à laquelle personne ne s'attend. Un avertissement, pas une
+  // erreur — un compte Workspace peut légitimement écrire au nom d'un alias.
+  if (
+    env.MAIL_DRIVER === "smtp" &&
+    env.SMTP_USER &&
+    !env.MAIL_FROM.includes(env.SMTP_USER)
+  ) {
+    console.warn(
+      `[vennora] MAIL_FROM (${env.MAIL_FROM}) ne contient pas SMTP_USER (${env.SMTP_USER}).\n` +
+        "          Gmail remplacera l'expéditeur par le compte authentifié.",
+    );
   }
 
   return env;

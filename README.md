@@ -175,6 +175,13 @@ fournie : la transcription vocale, la rédaction assistée et l'envoi
 d'e-mails. Chacune est derrière une interface — voir `AI_PROVIDER`,
 `TRANSCRIPTION_PROVIDER` et `MAIL_DRIVER` dans `.env.example`.
 
+**E-mail.** `MAIL_DRIVER=smtp` envoie par nodemailer, avec les variables
+`SMTP_*`. N'importe quel serveur SMTP fait l'affaire — celui de l'hébergeur du
+domaine, un routeur transactionnel, ou celui de l'entreprise elle-même : pas
+de compte à ouvrir chez un fournisseur d'API, et le rapport peut partir de
+l'adresse professionnelle de l'artisan. Le chiffrement est déduit du port
+(465 implicite, STARTTLS ailleurs) sauf si `SMTP_SECURE` le force.
+
 **Rédaction assistée.** `AI_PROVIDER=groq` branche un modèle ouvert servi par
 Groq — `qwen/qwen3.6-27b` par défaut — avec le même contrat que l'adaptateur
 Anthropic : les six sections sont imposées par un schéma JSON strict, pas
