@@ -181,6 +181,7 @@ export default async function InterventionsPage({
                       key={intervention.id}
                       intervention={intervention}
                       showTechnician={isAdmin}
+                      showReference
                     />
                   ))}
                 </div>

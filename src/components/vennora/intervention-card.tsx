@@ -13,14 +13,22 @@ import { cn } from "@/lib/utils";
  * technicien reconnaît la même carte partout. L'heure est la première chose
  * lue, en gros et à gauche — c'est l'information qui structure une journée
  * de tournée.
+ *
+ * La référence n'apparaît que sur la liste (`showReference`). Sur une tournée
+ * du jour, elle n'aide personne : on reconnaît un chantier à son client et à
+ * son heure. Elle sert quand on cherche une intervention passée, qu'on la
+ * cite au téléphone ou qu'on la retrouve depuis un rapport — et la recherche
+ * de cette page l'accepte justement comme critère.
  */
 export function InterventionCard({
   intervention,
   showTechnician = false,
+  showReference = false,
   className,
 }: {
   intervention: Data;
   showTechnician?: boolean;
+  showReference?: boolean;
   className?: string;
 }) {
   const { site, equipment } = intervention;
@@ -59,6 +67,14 @@ export function InterventionCard({
             {intervention.customer.name}
           </span>
           <StatusBadge status={intervention.status} />
+          {showReference && (
+            // Rejetée au bout de la ligne : la référence n'est pas ce qu'on
+            // lit, c'est ce qu'on cherche. Alignée à droite, elle se balaie
+            // d'un coup d'œil vertical sans gêner la lecture des noms.
+            <span className="ml-auto shrink-0 text-sm text-muted-foreground tabular-nums">
+              {intervention.reference}
+            </span>
+          )}
         </div>
 
         <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
