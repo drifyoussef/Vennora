@@ -98,6 +98,15 @@ export type _ReportOrigin = Exhaustive<
   (typeof ReportOrigin)[keyof typeof ReportOrigin]
 >;
 
+export const Plan = {
+  ESSENTIEL: "ESSENTIEL",
+  FONDATEUR: "FONDATEUR",
+  PRO: "PRO",
+  BUSINESS: "BUSINESS",
+  ENTREPRISE: "ENTREPRISE",
+} as const;
+export type Plan = (typeof Plan)[keyof typeof Plan];
+
 export const DocumentCategory = {
   REPORT: "REPORT",
   INVOICE: "INVOICE",

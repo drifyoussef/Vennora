@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Building2, Plus, UserRound, Users } from "lucide-react";
+import { Building2, Plus, Upload, UserRound, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,12 +41,23 @@ export default async function CustomersPage({
         description="Particuliers et professionnels suivis par l'entreprise."
         actions={
           canCreate && (
-            <Button asChild className="gap-1.5">
-              <Link href="/clients/nouveau">
-                <Plus className="size-4" />
-                Nouveau client
-              </Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {/* La reprise est proposée à côté de la création : c'est au
+                  moment où l'on découvre une liste vide qu'on se demande
+                  comment y faire entrer trois cents fiches. */}
+              <Button asChild variant="outline" className="gap-1.5">
+                <Link href="/clients/import">
+                  <Upload className="size-4" />
+                  Reprendre un fichier
+                </Link>
+              </Button>
+              <Button asChild className="gap-1.5">
+                <Link href="/clients/nouveau">
+                  <Plus className="size-4" />
+                  Nouveau client
+                </Link>
+              </Button>
+            </div>
           )
         }
       />

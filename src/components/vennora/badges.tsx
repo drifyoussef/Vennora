@@ -1,10 +1,11 @@
-import type { AnomalySeverity, InterventionStatus } from "@/core/enums";
+import type { AnomalySeverity, InterventionStatus, Plan } from "@/core/enums";
 import {
   ANOMALY_SEVERITY_LABEL,
   ANOMALY_SEVERITY_TONE,
   INTERVENTION_STATUS_LABEL,
   INTERVENTION_STATUS_TONE,
 } from "@/core/labels";
+import { libelleOffre } from "@/core/plans";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,14 +42,29 @@ export function StatusBadge({
 
 export function SeverityBadge({
   severity,
+  count,
   className,
 }: {
   severity: AnomalySeverity;
+  /** Renseigné, le nombre entre dans la pastille et le libellé se met au
+   *  pluriel : « 3 élevées » se lit d'un coup, contrairement à un compteur
+   *  posé à côté qu'il faut rattacher à sa pastille. */
+  count?: number;
   className?: string;
 }) {
+  const libelle = ANOMALY_SEVERITY_LABEL[severity];
   return (
     <span className={cn(base, ANOMALY_SEVERITY_TONE[severity], className)}>
-      {ANOMALY_SEVERITY_LABEL[severity]}
+      {count === undefined ? (
+        libelle
+      ) : (
+        <>
+          <span className="font-semibold tabular-nums">{count}</span>
+          <span className="ml-1">
+            {count > 1 ? `${libelle.toLowerCase()}s` : libelle.toLowerCase()}
+          </span>
+        </>
+      )}
     </span>
   );
 }
@@ -106,6 +122,34 @@ export function TechnicianChip({
           {firstName} {lastName}
         </span>
       )}
+    </span>
+  );
+}
+
+const OFFRE_TON: Record<Plan, string> = {
+  ESSENTIEL: "bg-offre-essentiel text-offre-essentiel-foreground",
+  FONDATEUR: "bg-offre-fondateur text-offre-fondateur-foreground",
+  PRO: "bg-offre-pro text-offre-pro-foreground",
+  BUSINESS: "bg-offre-business text-offre-business-foreground",
+  ENTREPRISE: "bg-offre-entreprise text-offre-entreprise-foreground",
+};
+
+/**
+ * Offre souscrite, affichée à côté du nom de l'entreprise.
+ *
+ * Purement informatif : rien ici ne donne de droit. Ce qui ouvre une
+ * fonctionnalité est la matrice de `core/plans.ts`, appliquée côté serveur.
+ */
+export function OffreBadge({ plan, className }: { plan: Plan; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase",
+        OFFRE_TON[plan],
+        className,
+      )}
+    >
+      {libelleOffre(plan)}
     </span>
   );
 }

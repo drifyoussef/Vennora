@@ -1,7 +1,7 @@
 import { PrismaClient } from "@/generated/prisma";
 import { tenantDb, type TenantContext } from "@/core/tenant";
 import type { AppContext } from "@/core/context";
-import { UserRole } from "@/core/enums";
+import { Plan, UserRole } from "@/core/enums";
 
 /**
  * Organisations jetables pour les tests.
@@ -29,6 +29,7 @@ function contextFor(
   userId: string,
   role: UserRole,
   tradeSlug: string,
+  plan: Plan,
 ): AppContext {
   const ctx: TenantContext = { orgId, userId, role };
   return {
@@ -49,12 +50,22 @@ function contextFor(
         logoKey: null,
         tradeSlug,
         tradeName: "Ramonage",
+        plan,
       },
     },
   };
 }
 
-export async function createTestOrg(label: string): Promise<TestOrg> {
+/**
+ * Organisation jetable. L'offre par défaut est la plus large : la plupart des
+ * tests portent sur autre chose que la facturation, et une organisation
+ * bridée les ferait échouer pour la mauvaise raison. Les tests de
+ * verrouillage, eux, demandent explicitement leur offre.
+ */
+export async function createTestOrg(
+  label: string,
+  plan: Plan = Plan.ENTREPRISE,
+): Promise<TestOrg> {
   const trade = await prisma.trade.findUniqueOrThrow({
     where: { slug: "ramonage" },
     select: { id: true, slug: true },
@@ -62,7 +73,7 @@ export async function createTestOrg(label: string): Promise<TestOrg> {
 
   const slug = `test-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const org = await prisma.organization.create({
-    data: { name: `Test ${label}`, slug, tradeId: trade.id },
+    data: { name: `Test ${label}`, slug, tradeId: trade.id, plan },
     select: { id: true },
   });
 
@@ -89,9 +100,9 @@ export async function createTestOrg(label: string): Promise<TestOrg> {
     adminId: admin.id,
     technicianId: technician.id,
     otherTechnicianId: other.id,
-    admin: contextFor(org.id, admin.id, UserRole.ADMIN, trade.slug),
-    technician: contextFor(org.id, technician.id, UserRole.TECHNICIAN, trade.slug),
-    otherTechnician: contextFor(org.id, other.id, UserRole.TECHNICIAN, trade.slug),
+    admin: contextFor(org.id, admin.id, UserRole.ADMIN, trade.slug, plan),
+    technician: contextFor(org.id, technician.id, UserRole.TECHNICIAN, trade.slug, plan),
+    otherTechnician: contextFor(org.id, other.id, UserRole.TECHNICIAN, trade.slug, plan),
   };
 }
 

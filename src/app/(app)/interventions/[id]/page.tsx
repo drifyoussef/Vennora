@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge, TechnicianChip, TypeBadge } from "@/components/vennora/badges";
 import { PanelBoundary } from "@/components/vennora/panel-boundary";
 import { Field, FieldGrid, PageHeader } from "@/components/vennora/page";
+import { ApercuFactice, ZoneVerrouillee } from "@/components/vennora/zone-verrouillee";
+import { autorise } from "@/core/plans";
 import { getPageContext } from "@/core/context";
 import { getIntervention } from "@/core/data/interventions";
 import { can } from "@/core/permissions";
@@ -254,14 +256,25 @@ export default async function InterventionPage({
               </PanelBoundary>
               )}
 
-              <PanelBoundary title="Dictée">
-                <VoicePanel
-                  interventionId={intervention.id}
-                  initial={voiceNotes}
-                  readOnly={readOnly}
-                  transcriptionLive={transcriptionIsLive}
+              {/* Le panneau réel n'est pas rendu hors offre : ni les notes,
+                  ni le composant d'enregistrement n'atteignent le navigateur. */}
+              {autorise(user.org.plan, "redaction-assistee") ? (
+                <PanelBoundary title="Dictée">
+                  <VoicePanel
+                    interventionId={intervention.id}
+                    initial={voiceNotes}
+                    readOnly={readOnly}
+                    transcriptionLive={transcriptionIsLive}
+                  />
+                </PanelBoundary>
+              ) : (
+                <ZoneVerrouillee
+                  fonctionnalite="redaction-assistee"
+                  titre="Dictée et compte-rendu assisté"
+                  description="Le technicien dicte ses constats, Vennora en tire un brouillon structuré qu'il relit et corrige."
+                  apercu={<ApercuFactice lignes={3} />}
                 />
-              </PanelBoundary>
+              )}
 
               <PanelBoundary title="Anomalies">
                 <AnomalyPanel
@@ -276,6 +289,8 @@ export default async function InterventionPage({
                   interventionId={intervention.id}
                   readOnly={readOnly}
                   aiLive={aiIsLive}
+                  redactionAssistee={autorise(user.org.plan, "redaction-assistee")}
+                  envoiAutorise={autorise(user.org.plan, "envoi-rapport")}
                   customerEmail={intervention.customer.email}
                   sections={trade.reportSections.map((s) => ({
                     key: s.key,

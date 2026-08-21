@@ -24,7 +24,7 @@ import {
   UserRole,
 } from "../src/generated/prisma";
 import { syncTradeCatalogs } from "../src/core/catalog-sync";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "../src/core/auth/hash";
 import { fakePhoto, fakeSignature, writeMedia } from "./seed-media";
 import { rm } from "node:fs/promises";
 import path from "node:path";
@@ -438,7 +438,7 @@ async function main() {
   });
 
   console.log("→ Création des utilisateurs…");
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+  const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   await prisma.user.create({
     data: {

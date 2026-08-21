@@ -7,6 +7,7 @@ import {
   Download,
   FileText,
   Loader2,
+  Lock,
   Mail,
   RefreshCw,
   Sparkles,
@@ -68,6 +69,8 @@ export function ReportPanel({
   initial,
   readOnly,
   aiLive,
+  redactionAssistee,
+  envoiAutorise,
   customerEmail,
 }: {
   interventionId: string;
@@ -75,6 +78,10 @@ export function ReportPanel({
   initial: ReportPanelState;
   readOnly: boolean;
   aiLive: boolean;
+  /** Offre couvrant la rédaction assistée : sinon le bouton n'existe pas. */
+  redactionAssistee: boolean;
+  /** Offre couvrant l'envoi au client. */
+  envoiAutorise: boolean;
   customerEmail: string | null;
 }) {
   const router = useRouter();
@@ -228,7 +235,7 @@ export function ReportPanel({
           </p>
         </div>
 
-        {!readOnly && (
+        {!readOnly && redactionAssistee && (
           <Button
             type="button"
             variant={empty ? "default" : "outline"}
@@ -357,14 +364,21 @@ export function ReportPanel({
                 Télécharger
               </a>
             </Button>
-            <Button
-              size="sm"
-              onClick={() => setSendOpen(true)}
-              className="gap-1.5"
-            >
-              <Mail className="size-4" />
-              Envoyer au client
-            </Button>
+            {envoiAutorise ? (
+              <Button
+                size="sm"
+                onClick={() => setSendOpen(true)}
+                className="gap-1.5"
+              >
+                <Mail className="size-4" />
+                Envoyer au client
+              </Button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Lock className="size-3.5" />
+                Envoi par e-mail : offre Pro
+              </span>
+            )}
           </div>
 
           {state.sentAt && (

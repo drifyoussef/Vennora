@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { OffreBadge } from "@/components/vennora/badges";
 import { VennoraLogo } from "@/components/vennora/logo";
+import type { Plan } from "@/core/enums";
 import { DESKTOP_NAV, isActive, visibleItems } from "@/core/navigation";
 import type { UserRole } from "@/core/enums";
 import { cn } from "@/lib/utils";
@@ -20,9 +22,11 @@ import { cn } from "@/lib/utils";
 export function Sidebar({
   role,
   orgName,
+  plan,
 }: {
   role: UserRole;
   orgName: string;
+  plan: Plan;
 }) {
   const pathname = usePathname();
 
@@ -33,7 +37,11 @@ export function Sidebar({
           href="/"
           className="block rounded-md text-sidebar-primary-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
         >
-          <VennoraLogo subtitle={orgName} className="text-white" />
+          <VennoraLogo
+            subtitle={orgName}
+            badge={<OffreBadge plan={plan} />}
+            className="text-white"
+          />
         </Link>
       </div>
 

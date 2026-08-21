@@ -171,6 +171,8 @@ export async function getCustomer({ db }: AppContext, id: string) {
         category: true,
         sizeBytes: true,
         createdAt: true,
+        // Nécessaire pour signer le lien de téléchargement côté serveur.
+        storageKey: true,
       },
     }),
     db.anomaly.count({

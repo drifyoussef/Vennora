@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getActionContext } from "@/core/context";
+import { exigerFonctionnalite } from "@/core/plans";
 import { requireEditableIntervention } from "@/core/data/field";
 import { TranscriptStatus } from "@/core/enums";
 import { NotFoundError, toActionError, type ActionResult } from "@/core/errors";
@@ -39,6 +40,9 @@ export async function addVoiceNoteAction(
 ): Promise<ActionResult<VoiceNoteDto>> {
   try {
     const context = await getActionContext("intervention.update");
+    // La note vocale n'a d'intérêt que transcrite : la garde est ici, à
+    // l'entrée, plutôt qu'après avoir stocké un fichier audio inexploitable.
+    exigerFonctionnalite(context, "redaction-assistee");
     const { db, ctx, user } = context;
     const id = objectId.parse(interventionId);
 

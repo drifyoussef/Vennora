@@ -37,10 +37,35 @@ dans `core/enums.ts`, sinon la compilation échoue (c'est voulu).
 
 Version figée en **6.19.3**. Prisma 7 ne supporte pas MongoDB (plus de moteur
 de requêtes, pas d'adaptateur Mongo publié). Après toute modification de
-`prisma/schema.prisma` : `npm run db:generate`.
+`prisma/schema.prisma` : `npm run db:generate`, **puis relancer `npm run dev`**.
+
+Le serveur de développement garde en mémoire le client généré à son
+démarrage : sans redémarrage, il ignore un champ ajouté (« Unknown field ») et
+refuse une valeur d'énumération ajoutée (« Value 'X' not found in enum »). Les
+scripts, eux, repartent d'un processus neuf et fonctionnent — d'où des erreurs
+qui n'apparaissent que dans l'application, et jamais en ligne de commande.
+
+Ajouter une valeur à une énumération existante demande en plus de **compléter
+les documents déjà en base** : un champ requis absent d'un document fait
+échouer sa lecture, et `@default` ne s'applique qu'à la création.
 
 Aucune contrainte d'intégrité côté base. Les suppressions en cascade sont
 écrites à la main dans les actions, dans l'ordre inverse des dépendances.
+
+## Offres
+
+`Organization.plan` décide des fonctionnalités servies. La matrice est dans
+`src/core/plans.ts` et nulle part ailleurs.
+
+Toute fonctionnalité payante se garde **des deux côtés** :
+
+```ts
+exigerFonctionnalite(context, "export");   // action ou route : refuse
+autorise(user.org.plan, "export")          // page : ne rend pas le composant
+```
+
+Le composant `ZoneVerrouillee` ne reçoit qu'un décor. Ne jamais y passer de
+données réelles en comptant sur le flou : c'est du CSS, ça se retire.
 
 ## Fichiers
 

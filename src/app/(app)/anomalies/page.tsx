@@ -139,15 +139,7 @@ export default async function AnomaliesPage({
               {[...bySeverity.entries()]
                 .sort((a, b) => b[1] - a[1])
                 .map(([severity, count]) => (
-                  <span
-                    key={severity}
-                    className="inline-flex items-center gap-1.5"
-                  >
-                    <SeverityBadge severity={severity} />
-                    <span className="text-sm text-muted-foreground tabular-nums">
-                      {count}
-                    </span>
-                  </span>
+                  <SeverityBadge key={severity} severity={severity} count={count} />
                 ))}
             </div>
           )}

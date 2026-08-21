@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-dvh">
-      <Sidebar role={user.role} orgName={user.org.name} />
+      <Sidebar role={user.role} orgName={user.org.name} plan={user.org.plan} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar

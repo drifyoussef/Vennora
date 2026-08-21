@@ -1,4 +1,5 @@
 import "server-only";
+import type { Plan } from "@/core/enums";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
@@ -23,6 +24,8 @@ export interface CurrentUser {
     logoKey: string | null;
     tradeSlug: string;
     tradeName: string;
+    /** Offre souscrite : c'est elle qui ouvre ou ferme les fonctionnalités. */
+    plan: Plan;
   };
 }
 
@@ -57,6 +60,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
           id: true,
           name: true,
           logoKey: true,
+          plan: true,
           trade: { select: { slug: true, name: true } },
         },
       },
@@ -92,6 +96,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       logoKey: user.org.logoKey,
       tradeSlug: user.org.trade.slug,
       tradeName: user.org.trade.name,
+      plan: user.org.plan,
     },
   };
 });

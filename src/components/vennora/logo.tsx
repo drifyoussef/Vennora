@@ -44,10 +44,13 @@ export function VennoraLogo({
   className,
   showWordmark = true,
   subtitle,
+  badge,
 }: {
   className?: string;
   showWordmark?: boolean;
   subtitle?: string;
+  /** Pastille posée à côté du sous-titre — l'offre, dans la barre latérale. */
+  badge?: React.ReactNode;
 }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
@@ -58,8 +61,14 @@ export function VennoraLogo({
             Vennora Ramonage
           </div>
           {subtitle && (
-            <div className="mt-1 truncate text-[11px] font-medium opacity-60">
-              {subtitle}
+            // La pastille passe à la ligne plutôt que de rogner le nom de
+            // l'entreprise : « Ramonage Cév… » est une information perdue,
+            // une seconde ligne n'est qu'un peu de place.
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+              <span className="truncate text-[11px] font-medium opacity-60">
+                {subtitle}
+              </span>
+              {badge}
             </div>
           )}
         </div>

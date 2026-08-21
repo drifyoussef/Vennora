@@ -2,22 +2,14 @@ import "server-only";
 import bcrypt from "bcryptjs";
 
 /**
- * 12 tours : ~250 ms sur un serveur courant en 2026. Assez lent pour rendre
- * une attaque par dictionnaire coûteuse, assez rapide pour ne pas dégrader
- * une connexion depuis un téléphone en 4G sur un chantier.
+ * Mots de passe, côté application.
+ *
+ * Le calcul lui-même vit dans `hash.ts`, sans la garde `server-only` : le
+ * seed et le provisionnement d'une organisation en ont besoin hors du
+ * runtime Next. Ce module reste le point d'entrée de l'application, avec sa
+ * garde et la comparaison à temps constant.
  */
-const ROUNDS = 12;
-
-export function hashPassword(plain: string): Promise<string> {
-  return bcrypt.hash(plain, ROUNDS);
-}
-
-export function verifyPassword(
-  plain: string,
-  hash: string,
-): Promise<boolean> {
-  return bcrypt.compare(plain, hash);
-}
+export { hashPassword, verifyPassword, HASH_ROUNDS } from "./hash";
 
 /**
  * Compare systématiquement contre un hash factice quand l'utilisateur

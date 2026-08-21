@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { exigerFonctionnalite } from "@/core/plans";
 import { getActionContext } from "@/core/context";
 import { requireEditableIntervention, requireVisibleIntervention } from "@/core/data/field";
 import { buildReportContext, loadReportData } from "@/core/data/report";
@@ -49,6 +50,7 @@ export async function generateReportAction(
 ): Promise<ActionResult<ReportSectionValues & { provider: string }>> {
   try {
     const context = await getActionContext("report.edit");
+    exigerFonctionnalite(context, "redaction-assistee");
     const { db, ctx } = context;
     const id = objectId.parse(interventionId);
 
@@ -261,6 +263,7 @@ export async function sendReportAction(
 ): Promise<ActionResult<{ sentTo: string; driver: string }>> {
   try {
     const context = await getActionContext("report.send");
+    exigerFonctionnalite(context, "envoi-rapport");
     const { db, ctx } = context;
     const id = objectId.parse(interventionId);
 

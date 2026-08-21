@@ -54,7 +54,88 @@ produire une erreur obscure à la première requête.
 | `npm run lint`      | ESLint                                            |
 | `npm run db:push`   | Applique le schéma Prisma à MongoDB               |
 | `npm run db:seed`   | (Re)crée le jeu de démonstration                  |
+| `npm run org:create`| Crée une entreprise cliente et son administrateur |
+| `npm run user:password`| Réinitialise le mot de passe d'un utilisateur      |
+| `npm run org:plan`  | Affiche ou change l'offre d'une entreprise         |
 | `npm run db:studio` | Prisma Studio                                     |
+
+---
+
+## Embarquer un client
+
+Il n'existe pas d'inscription en libre-service, et c'est délibéré tant qu'il
+n'y a ni vérification d'adresse ni limitation des créations. Une entreprise se
+crée en ligne de commande :
+
+```bash
+npm run org:create -- --nom "Ramonage du Gard" \
+    --admin-email celine@ramonage-du-gard.fr \
+    --admin-prenom Céline --admin-nom Mazel --ville Nîmes
+```
+
+Le mot de passe est tiré au sort et affiché **une seule fois** — sauf si
+`--mot-de-passe` en impose un. Le client le change ensuite depuis son profil.
+La commande synchronise les catalogues métier au passage : l'entreprise créée
+trouve ses types d'équipement dès la première intervention.
+
+La règle métier vit dans `src/core/onboarding.ts`. Le jour où une inscription
+en libre-service existera, elle appellera la même fonction — pas une copie.
+
+**Reprise du fichier clients.** Un nouveau client arrive avec un tableur :
+`/clients/import` lit un CSV — point-virgule, accents Windows-1252 et marque
+d'ordre d'octets compris — montre ce qu'il a compris, puis écrit sur
+validation. L'opération est idempotente sur le couple nom + code postal :
+relancée, elle n'ajoute rien.
+
+**Mot de passe perdu.** Un administrateur réinitialise celui de ses
+techniciens depuis l'application. Pour l'administrateur unique qui perd le
+sien, il reste la ligne de commande :
+
+```bash
+npm run user:password -- --email celine@ramonage-cevennes.fr [--reactiver]
+```
+
+**Export des données.** `Paramètres → Vos données` construit à la demande une
+archive ZIP : six fichiers CSV lisibles dans un tableur, les rapports PDF
+signés, et un fichier de lecture. Rien n'est stocké au passage.
+
+---
+
+## Offres
+
+`Organization.plan` porte l'offre souscrite, et `src/core/plans.ts` dit ce que
+chacune donne. C'est la seule matrice : l'interface la lit pour flouter, le
+serveur la lit pour refuser.
+
+| | Essentiel | Fondateur | Pro | Business | Entreprise |
+| --- | --- | --- | --- | --- | --- |
+| Clients, sites, équipements, planning, photos, QR, rapport PDF | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Dictée et compte-rendu assisté | | ✅ | ✅ | ✅ | ✅ |
+| Envoi du rapport par e-mail | | ✅ | ✅ | ✅ | ✅ |
+| Suivi des échéances | | ✅ | ✅ | ✅ | ✅ |
+| Export complet depuis l'application | | | | ✅ | ✅ |
+
+« Fondateur » est une offre de lancement et non un palier : mêmes
+fonctionnalités que Pro, prix tenu dans la durée. Elle est volontairement
+absente de l'échelle commerciale du code — l'application ne proposera jamais
+d'y « passer », puisqu'elle ne se souscrit plus.
+
+**Le floutage n'est pas la protection.** Une zone verrouillée n'est pas rendue
+avec ses données — le composant réel n'atteint jamais le navigateur — et
+l'action correspondante appelle `exigerFonctionnalite`, qui refuse. Retirer un
+filtre CSS ne révèle donc rien, et forger la requête ne fait rien.
+
+Le nombre d'utilisateurs compris est déclaré dans la matrice mais **n'est pas
+appliqué** : rien n'empêche aujourd'hui un quatrième compte sur une offre qui
+en comprend trois. C'est un choix, pas un oubli — tant que la facturation est
+manuelle, mieux vaut un client servi qu'un client bloqué un samedi.
+
+Changer l'offre d'un client se fait hors de l'application :
+
+```bash
+npm run org:plan                                    # état des lieux
+npm run org:plan -- --slug ramonage-cevennes --offre PRO
+```
 
 ---
 

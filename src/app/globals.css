@@ -63,6 +63,19 @@
   --color-status-done: var(--status-done);
   --color-status-cancelled: var(--status-cancelled);
 
+  /* Offres. Portées par la barre latérale, en bleu pétrole : l'offre
+     d'entrée doit s'en détacher sans crier, les payantes se voir. */
+  --color-offre-essentiel: var(--offre-essentiel);
+  --color-offre-essentiel-foreground: var(--offre-essentiel-foreground);
+  --color-offre-fondateur: var(--offre-fondateur);
+  --color-offre-fondateur-foreground: var(--offre-fondateur-foreground);
+  --color-offre-pro: var(--offre-pro);
+  --color-offre-pro-foreground: var(--offre-pro-foreground);
+  --color-offre-business: var(--offre-business);
+  --color-offre-business-foreground: var(--offre-business-foreground);
+  --color-offre-entreprise: var(--offre-entreprise);
+  --color-offre-entreprise-foreground: var(--offre-entreprise-foreground);
+
   /* Métiers (verticaux) */
   --color-trade-ramonage: #2e2a28;
   --color-trade-chauffage: #e2610f;
@@ -125,6 +138,22 @@
   --status-progress: #d97a28;
   --status-done: #4f7b45;
   --status-cancelled: #a8a29a;
+
+  /* Un cran plus clair que la barre latérale pour Essentiel, l'ambre de la
+     marque pour Pro, l'or pour Business, un platine froid au-dessus. */
+  --offre-essentiel: #2a6b80;
+  --offre-essentiel-foreground: #eaf3f6;
+  /* Améthyste : elle n'appartient à aucun métier, donc aucune confusion
+     possible, et elle tranche sur le pétrole de la barre latérale. Une offre
+     qu'on ne peut plus souscrire mérite de se voir. */
+  --offre-fondateur: #7c5cb0;
+  --offre-fondateur-foreground: #ffffff;
+  --offre-pro: #d97a28;
+  --offre-pro-foreground: #ffffff;
+  --offre-business: #d4af37;
+  --offre-business-foreground: #2a1f05;
+  --offre-entreprise: #dce3e7;
+  --offre-entreprise-foreground: #0f3d4c;
 
   --sidebar: #0f3d4c;
   --sidebar-foreground: #cfe0e5;
@@ -206,6 +235,10 @@
   h2,
   h3 {
     @apply font-heading tracking-tight;
+  }
+
+  button {
+    cursor: pointer;
   }
 }
 

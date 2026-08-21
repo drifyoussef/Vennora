@@ -25,18 +25,16 @@ import {
 } from "@/components/vennora/page";
 import { StatusBadge, TechnicianChip, TypeBadge } from "@/components/vennora/badges";
 import { getPageContext } from "@/core/context";
+import { autorise } from "@/core/plans";
+import { fileUrl } from "@/services/storage";
 import { getCustomer } from "@/core/data/customers";
 import { CUSTOMER_KIND_LABEL, DOCUMENT_CATEGORY_LABEL, plural } from "@/core/labels";
 import { can } from "@/core/permissions";
 import { objectId } from "@/core/schemas";
 import { CustomerKind } from "@/core/enums";
-import {
-  formatAddress,
-  formatDate,
-  formatDateTime,
-  formatPhone,
-} from "@/lib/format";
+import { formatAddress, formatDate, formatPhone } from "@/lib/format";
 import { DeleteCustomer } from "./delete-customer";
+import { DocumentRow } from "./document-row";
 
 export async function generateMetadata({
   params,
@@ -75,6 +73,11 @@ export default async function CustomerPage({ params }: PageProps<"/clients/[id]"
   const equipmentCount = customer.sites.reduce(
     (sum, site) => sum + site._count.equipments,
     0,
+  );
+
+  const envoiAutorise = autorise(context.user.org.plan, "envoi-rapport");
+  const documentsAvecLien = await Promise.all(
+    customer.documents.map(async (d) => ({ ...d, url: await fileUrl(d.storageKey) })),
   );
 
   return (
@@ -395,22 +398,17 @@ export default async function CustomerPage({ params }: PageProps<"/clients/[id]"
             />
           ) : (
             <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-              {customer.documents.map((document) => (
-                <li
+              {documentsAvecLien.map((document) => (
+                <DocumentRow
                   key={document.id}
-                  className="flex items-center gap-3 px-4 py-3"
-                >
-                  <FileText className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {document.name}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {DOCUMENT_CATEGORY_LABEL[document.category]}
-                  </span>
-                  <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">
-                    {formatDateTime(document.createdAt)}
-                  </span>
-                </li>
+                  id={document.id}
+                  nom={document.name}
+                  categorie={DOCUMENT_CATEGORY_LABEL[document.category]}
+                  creeLe={document.createdAt.toISOString()}
+                  url={document.url}
+                  emailClient={customer.email}
+                  envoiAutorise={envoiAutorise}
+                />
               ))}
             </ul>
           )}

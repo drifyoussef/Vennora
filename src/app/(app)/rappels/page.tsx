@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { BellRing, CalendarCheck } from "lucide-react";
 
 import { EmptyState, PageHeader } from "@/components/vennora/page";
+import { ApercuFactice, ZoneVerrouillee } from "@/components/vennora/zone-verrouillee";
 import { getPageContext } from "@/core/context";
+import { autorise } from "@/core/plans";
 import { listReminders } from "@/core/data/reminders";
 import { ReminderStatus } from "@/core/enums";
 import { plural } from "@/core/labels";
@@ -46,6 +48,23 @@ export default async function RemindersPage({
     sourceReference: r.sourceIntervention?.reference ?? null,
     sourceId: r.sourceIntervention?.id ?? null,
   }));
+
+  if (!autorise(context.user.org.plan, "rappels")) {
+    return (
+      <>
+        <PageHeader
+          title="Rappels"
+          description="Prochaines interventions conseillées, fixées à la clôture."
+        />
+        <ZoneVerrouillee
+          fonctionnalite="rappels"
+          titre="Suivi des échéances"
+          description="La liste de ce qui arrive à terme, équipement par équipement, avant que le client n'appelle."
+          apercu={<ApercuFactice lignes={5} />}
+        />
+      </>
+    );
+  }
 
   return (
     <>

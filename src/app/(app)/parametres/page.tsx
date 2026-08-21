@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, Plus, Users } from "lucide-react";
+import { Building2, Download, Lock, Plus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldGrid, PageHeader } from "@/components/vennora/page";
 import { TechnicianChip } from "@/components/vennora/badges";
 import { getPageContext } from "@/core/context";
+import {
+  autorise,
+  libelleOffre,
+  messageOffre,
+  utilisateursInclus,
+} from "@/core/plans";
 import { USER_ROLE_LABEL } from "@/core/labels";
 import { getEquipmentTypes, getInterventionTypes } from "@/core/catalog";
 import { formatAddress, formatDate, formatPhone } from "@/lib/format";
@@ -155,6 +161,51 @@ export default async function SettingsPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* L'export est proposé sans condition ni délai : c'est la
+          contrepartie de « vos données vous appartiennent ». Un client qui
+          doit le demander ne le croit qu'à moitié. */}
+      <section className="mb-6 rounded-xl border border-border bg-card p-5">
+        <h2 className="font-heading mb-1 text-base font-semibold">
+          Votre offre
+        </h2>
+        <p className="text-sm text-muted-foreground text-pretty">
+          Vous êtes à l&apos;offre{" "}
+          <span className="text-foreground font-medium">
+            {libelleOffre(user.org.plan)}
+          </span>
+          {" "}: {utilisateursInclus(user.org.plan) === Infinity
+            ? "utilisateurs illimités"
+            : `${utilisateursInclus(user.org.plan)} utilisateur(s) compris`}
+          . Pour en changer, écrivez-nous.
+        </p>
+      </section>
+
+      <section className="mb-6 rounded-xl border border-border bg-card p-5">
+        <h2 className="font-heading mb-1 text-base font-semibold">
+          Vos données
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground text-pretty">
+          Clients, sites, équipements, interventions, anomalies et
+          comptes-rendus au format tableur, accompagnés des rapports PDF
+          signés. L&apos;archive est construite à la demande : elle est
+          toujours à jour, et rien n&apos;en est conservé sur nos serveurs.
+        </p>
+        {autorise(user.org.plan, "export") ? (
+          <Button asChild variant="outline" className="gap-1.5">
+            <a href="/api/export" download>
+              <Download className="size-4" />
+              Télécharger l&apos;export complet
+            </a>
+          </Button>
+        ) : (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Lock className="size-4 shrink-0" />
+            {messageOffre("export")} Nous vous le fournissons sur demande en
+            attendant : vos données restent les vôtres.
+          </p>
+        )}
       </section>
 
       <section className="rounded-xl border border-border bg-card p-5">

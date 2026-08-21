@@ -73,6 +73,19 @@ enum DocumentCategory {
   OTHER
 }
 
+/// Offre souscrite par l'entreprise. Détermine les fonctionnalités servies :
+/// la matrice vit dans src/core/plans.ts, et c'est le serveur qui l'applique.
+enum Plan {
+  ESSENTIEL
+  /// Offre de lancement : les fonctionnalités de Pro, à prix tenu dans la
+  /// durée, pour les entreprises entrées les premières. Elle ne se vend plus
+  /// une fois la période close, mais celles qui l'ont gardent leurs droits.
+  FONDATEUR
+  PRO
+  BUSINESS
+  ENTREPRISE
+}
+
 enum ReminderStatus {
   PENDING
   SCHEDULED
@@ -153,6 +166,11 @@ model Organization {
   id   String @id @default(auto()) @map("_id") @db.ObjectId
   name String
   slug String @unique
+
+  /// Offre souscrite. Toute nouvelle entreprise démarre au plus bas :
+  /// ouvrir des fonctionnalités est une décision commerciale, jamais un
+  /// effet de bord de la création d'un compte.
+  plan Plan @default(ESSENTIEL)
 
   address    String?
   postalCode String?
